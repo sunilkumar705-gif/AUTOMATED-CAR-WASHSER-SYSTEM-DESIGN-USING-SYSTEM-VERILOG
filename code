@@ -1,0 +1,136 @@
+module miniproject (
+    input logic clk,
+    input logic reset,
+    input logic start, 
+    input logic water_spray_sensor, 
+    input logic soap_spray_sensor, 
+    input logic rinse_sensor, 
+    input logic dry_sensor,
+    input logic error_reset,  
+    output logic water_spray, 
+    output logic soap_spray, 
+    output logic rinse, 
+    output logic dry, 
+    output logic wash_complete,
+    output logic error_flag
+);
+
+    // Define state enumeration
+    typedef enum logic [2:0] {
+        IDLE, WATER, SOAP, RINSE, DRY, COMPLETE, ERROR
+    } state_t;
+
+    state_t current_state, next_state;
+
+    // Timer variables
+    parameter int TIMEOUT_LIMIT_water = 10;
+    parameter int TIMEOUT_LIMIT_soap = 20;
+    parameter int TIMEOUT_LIMIT_rinse = 30;
+    parameter int TIMEOUT_LIMIT_dry = 40;
+      // Timeout limit in clock cycles for each state
+    logic [5:0] timer_count;           // 6-bit timer counter
+    logic timeout_error;               // Flag that indicates timeout has occurred
+
+    // Timer logic: Increment timer on each clock cycle in active states,
+    // and reset timer when in IDLE, COMPLETE, or ERROR states.
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset) begin
+            timer_count <= 0;
+        end
+        else begin
+            // When in active states (WATER, SOAP, RINSE, DRY), increment timer.
+            if (current_state == WATER || current_state == SOAP ||
+                current_state == RINSE || current_state == DRY)
+                timer_count <= timer_count + 1;
+            else
+                timer_count <= 0;  // Reset timer in other states
+        end
+    end
+
+    // Generate timeout error if the timer exceeds the limit in any active state.
+    always_comb begin
+        if (((current_state == WATER) && (timer_count >= TIMEOUT_LIMIT_water)) || ((current_state == SOAP) && (timer_count >= TIMEOUT_LIMIT_soap)) ||
+             ((current_state == RINSE) && (timer_count >= TIMEOUT_LIMIT_rinse))|| ((current_state == DRY) && (timer_count >= TIMEOUT_LIMIT_dry)))
+            timeout_error = 1;
+        else
+            timeout_error = 0;
+    end
+
+    // State machine: Sequentially update current state
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset)
+            current_state <= IDLE;
+        else if (error_reset)
+            current_state <= IDLE;  // Clear errors and return to IDLE when error_reset is asserted
+        else
+            current_state <= next_state;
+    end
+
+    // Combinational logic: Next state and output generation
+    always_comb begin
+        // Default outputs
+        water_spray   = 0;
+        soap_spray    = 0;
+        rinse         = 0;
+        dry           = 0;
+        wash_complete = 0;
+        error_flag    = 0;
+        next_state    = current_state;
+
+        case (current_state)
+            IDLE: begin
+                if (start)
+                    next_state = WATER;
+            end
+
+            WATER: begin
+                water_spray = 1;
+                if (water_spray_sensor) begin
+                    next_state = SOAP;
+                end else if (timeout_error) begin
+                    next_state = ERROR;
+                end
+            end
+
+            SOAP: begin
+                soap_spray = 1;
+                if (soap_spray_sensor) begin
+                    next_state = RINSE;
+                end else if (timeout_error) begin
+                    next_state = ERROR;
+                end
+            end
+
+            RINSE: begin
+                rinse = 1;
+                if (rinse_sensor) begin
+                    next_state = DRY;
+                end else if (timeout_error) begin
+                    next_state = ERROR;
+                end
+            end
+
+            DRY: begin
+                dry = 1;
+                if (dry_sensor) begin
+                    next_state = COMPLETE;
+                end else if (timeout_error) begin
+                    next_state = ERROR;
+                end
+            end
+
+            COMPLETE: begin
+                wash_complete = 1;
+                next_state = IDLE;  // After completion, return to IDLE
+            end
+
+            ERROR: begin
+                error_flag = 1;
+                next_state = IDLE;  // System resets after error (or waits for error_reset)
+            end
+
+            default: next_state = IDLE;
+        endcase
+    end
+
+endmodule
