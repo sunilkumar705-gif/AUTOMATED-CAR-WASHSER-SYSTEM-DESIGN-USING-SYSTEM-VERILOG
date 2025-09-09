@@ -1,0 +1,163 @@
+Normal Operation
+module tb;
+
+    // Declare test signals
+    logic clk;
+    logic reset;
+    logic start;
+    logic water_spray_sensor;
+    logic soap_spray_sensor;
+    logic rinse_sensor;
+    logic dry_sensor;
+    logic error_reset;
+
+    logic water_spray;
+    logic soap_spray;
+    logic rinse;
+    logic dry;
+    logic wash_complete;
+    logic error_flag;
+
+    // Instantiate the car wash controller module
+    miniproject uut (
+        .clk(clk),
+        .reset(reset),
+        .start(start),
+        .water_spray_sensor(water_spray_sensor),
+        .soap_spray_sensor(soap_spray_sensor),
+        .rinse_sensor(rinse_sensor),
+        .dry_sensor(dry_sensor),
+        .error_reset(error_reset),
+        .water_spray(water_spray),
+        .soap_spray(soap_spray),
+        .rinse(rinse),
+        .dry(dry),
+        .wash_complete(wash_complete),
+        .error_flag(error_flag)
+    );
+
+    // Generate clock signal (50 MHz = 20ns period)
+    always #5 clk = ~clk;
+
+    // Test sequence for timeout error case
+    initial begin
+        // Initialize signals
+        clk = 0;
+        reset = 1;
+        start = 0;
+        water_spray_sensor = 0;
+        soap_spray_sensor = 0;
+        rinse_sensor = 0;
+        dry_sensor = 0;
+        error_reset = 0;
+
+        #10 reset = 0;  // De-assert reset after 20ns
+        
+        #20 start = 1;  // Start the car wash process
+        #10 start = 0;  // De-assert start
+
+        // No sensor signals are given, causing a timeout error
+        #20 water_spray_sensor=1;
+       #10 water_spray_sensor=0;
+       #20 soap_spray_sensor=1;
+       #10 soap_spray_sensor=0;
+       #20 rinse_sensor=1;
+       #10 rinse_sensor=0;
+       #20 dry_sensor=1;
+       #10 dry_sensor=0;
+       
+        // Wait for timeout period (adjust if needed)
+
+        
+        error_reset = 1;
+        #10 error_reset = 0;
+
+        // Check if system returns to IDLE
+        #100;
+
+        $display("comleted");
+        $finish;
+    end
+endmodule
+
+Timeout Error
+module tb;
+
+    // Declare test signals
+    logic clk;
+    logic reset;
+    logic start;
+    logic water_spray_sensor;
+    logic soap_spray_sensor;
+    logic rinse_sensor;
+    logic dry_sensor;
+    logic error_reset;
+
+    logic water_spray;
+    logic soap_spray;
+    logic rinse;
+    logic dry;
+    logic wash_complete;
+    logic error_flag;
+
+    // Instantiate the car wash controller module
+    miniproject uut (
+        .clk(clk),
+        .reset(reset),
+        .start(start),
+        .water_spray_sensor(water_spray_sensor),
+        .soap_spray_sensor(soap_spray_sensor),
+        .rinse_sensor(rinse_sensor),
+        .dry_sensor(dry_sensor),
+        .error_reset(error_reset),
+        .water_spray(water_spray),
+        .soap_spray(soap_spray),
+        .rinse(rinse),
+        .dry(dry),
+        .wash_complete(wash_complete),
+        .error_flag(error_flag)
+    );
+
+    // Generate clock signal (50 MHz = 20ns period)
+    always #5 clk = ~clk;
+
+    // Test sequence for timeout error case
+    initial begin
+        // Initialize signals
+        clk = 0;
+        reset = 1;
+        start = 0;
+        water_spray_sensor = 0;
+        soap_spray_sensor = 0;
+        rinse_sensor = 0;
+        dry_sensor = 0;
+        error_reset = 0;
+
+        #10 reset = 0;  // De-assert reset after 20ns
+        
+        #20 start = 1;  // Start the car wash process
+        #10 start = 0;  // De-assert start
+
+        // No sensor signals are given, causing a timeout error
+        #90 water_spray_sensor=1;
+       #10 water_spray_sensor=0;
+       #90 soap_spray_sensor=1;
+       #10 soap_spray_sensor=0;
+       //#20 rinse_sensor=1;
+       //#10 rinse_sensor=0;
+       //#20 dry_sensor=1;
+       //#10 dry_sensor=0;
+       
+        #500// Wait for timeout period (adjust if needed)
+
+        
+        error_reset = 1;
+        #10 error_reset = 0;
+
+        // Check if system returns to IDLE
+        #100;
+
+        $display("comleted");
+        $finish;
+    end
+endmodule
